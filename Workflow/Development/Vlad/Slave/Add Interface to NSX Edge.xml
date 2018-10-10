@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<workflow xmlns="http://vmware.com/vco/workflow" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://vmware.com/vco/workflow http://vmware.com/vco/workflow/Workflow-v4.xsd" root-name="item1" object-name="workflow:name=generic" id="94049d0f-60b5-4f39-bf13-2b73e04d03a6" version="0.0.1" api-version="6.0.0" allowed-operations="vef" restartMode="1" resumeFromFailedMode="0">
+  <display-name><![CDATA[Add Interface to NSX Edge]]></display-name>
+  <description><![CDATA[This workflow adds an interface to an NSX edge.]]></description>
+  <position y="50.0" x="100.0"/>
+  <input>
+    <param name="connection" type="NSX:Connection">
+      <description><![CDATA[NSX Endpoint]]></description>
+    </param>
+    <param name="edge" type="NSX:Edge">
+      <description><![CDATA[NSX Edge]]></description>
+    </param>
+    <param name="name" type="string">
+      <description><![CDATA[Name of the interface]]></description>
+    </param>
+    <param name="index" type="number">
+      <description><![CDATA[Index of the interface (0-9)]]></description>
+    </param>
+    <param name="connectedToObject" type="NSX:VirtualWire">
+      <description><![CDATA[Logical switch connected to the interface]]></description>
+    </param>
+    <param name="connectedToString" type="string">
+      <description><![CDATA[Network or Portgroup connected to the interface]]></description>
+    </param>
+    <param name="addressGroups" type="Array/CompositeType(PrimaryAddress:string,SecondaryAddresses:string,PrefixLength:string):AddressGroup">
+      <description><![CDATA[IP Address specification for the interface]]></description>
+    </param>
+    <param name="type" type="string">
+      <description><![CDATA[Type of interface (uplink or internal)]]></description>
+    </param>
+    <param name="mtu" type="number">
+      <description><![CDATA[MTU]]></description>
+    </param>
+    <param name="isConnected" type="boolean">
+      <description><![CDATA[Flag to indicated if the interface is connected]]></description>
+    </param>
+  </input>
+  <output>
+    <param name="result" type="NSX:Nic">
+      <description><![CDATA[NSX edge interface that was created]]></description>
+    </param>
+  </output>
+  <workflow-item name="item0" type="end" end-mode="0">
+    <position y="45.40909090909091" x="384.5"/>
+  </workflow-item>
+  <workflow-item name="item1" out-name="item0" type="task">
+    <display-name><![CDATA[Scriptable task]]></display-name>
+    <script encoded="false"><![CDATA[var dto = new NSXVnicDto();
+dto.name = name;
+dto.index = index;
+dto.isConnected = isConnected;
+dto.mtu = mtu;
+dto.type = type;
+
+if (connectedToObject != null) {
+    dto.portgroupId = connectedToObject.objectId;
+} else if (connectedToString != "") {
+    dto.portgroupId = connectedToString;
+}
+
+if (addressGroups != null) {
+    var addressGroupsDto = new NSXEdgeVnicAddressGroupsDto();
+    var addressGroupsArray = new Array();
+    for (i=0; i<addressGroups.length; i++) {
+        var addressGroupElement = new NSXEdgeVnicAddressGroupDto();
+        addressGroupElement.primaryAddress = addressGroups[i].PrimaryAddress;
+        addressGroupElement.subnetPrefixLength = addressGroups[i].PrefixLength;
+        if (addressGroups[i].SecondaryAddresses != null && addressGroups[i].SecondaryAddresses != "") {
+            var secondaryAddressArray = addressGroups[i].SecondaryAddresses.split(",");
+            var secondaryAddressDto = new NSXIpAddressesDto();
+            secondaryAddressDto.ipAddress = secondaryAddressArray;
+            addressGroupElement.secondaryAddresses = secondaryAddressDto;
+        }
+        addressGroupsArray[i] = addressGroupElement;
+    }
+    addressGroupsDto.addressGroups = addressGroupsArray;
+    dto.addressGroups = addressGroupsDto;
+}
+
+
+NSXEdgeVnicTrinityController.configureEdgeVnicV4(connection, edge.objectId, index, dto);
+
+var args = new Array();
+args[0] = edge.objectId;
+args[1] = index;
+result = new NSXNic(connection.id, args);]]></script>
+    <in-binding>
+      <bind name="addressGroups" type="Array/CompositeType(PrimaryAddress:string,SecondaryAddresses:string,PrefixLength:string):AddressGroup" export-name="addressGroups"/>
+      <bind name="connectedToObject" type="NSX:VirtualWire" export-name="connectedToObject"/>
+      <bind name="connectedToString" type="string" export-name="connectedToString"/>
+      <bind name="connection" type="NSX:Connection" export-name="connection"/>
+      <bind name="edge" type="NSX:Edge" export-name="edge"/>
+      <bind name="index" type="number" export-name="index"/>
+      <bind name="isConnected" type="boolean" export-name="isConnected"/>
+      <bind name="mtu" type="number" export-name="mtu"/>
+      <bind name="name" type="string" export-name="name"/>
+      <bind name="type" type="string" export-name="type"/>
+    </in-binding>
+    <out-binding>
+      <bind name="result" type="NSX:Nic" export-name="result"/>
+    </out-binding>
+    <position y="55.40909090909091" x="204.5"/>
+  </workflow-item>
+  <presentation>
+    <p-param name="connection">
+      <desc><![CDATA[NSX Connection object (Select from the NSX inventory, from the vRO inventory view)]]></desc>
+    </p-param>
+    <p-param name="edge">
+      <desc><![CDATA[NSX Edge object (Select from the NSX inventory, from the vRO inventory view)]]></desc>
+    </p-param>
+    <p-param name="name">
+      <desc><![CDATA[Name of the interface]]></desc>
+      <p-qual kind="static" name="mandatory" type="boolean"><![CDATA[true]]></p-qual>
+    </p-param>
+    <p-param name="index">
+      <desc><![CDATA[Index of the interface (0-9)]]></desc>
+      <p-qual kind="static" name="mandatory" type="boolean"><![CDATA[true]]></p-qual>
+    </p-param>
+    <p-param name="connectedToObject">
+      <desc><![CDATA[Logical switch connected to the interface (Select from the NSX inventory, from the vRO inventory view)]]></desc>
+    </p-param>
+    <p-param name="connectedToString">
+      <desc><![CDATA[OR Network or Portgroup connected to the interface]]></desc>
+    </p-param>
+    <p-param name="addressGroups">
+      <desc><![CDATA[IP Address specification for the interface. Provide primary IP address, prefix length and comma separated list of secondary IP addresses.]]></desc>
+    </p-param>
+    <p-param name="type">
+      <desc><![CDATA[Type of interface (uplink or internal or trunk)]]></desc>
+      <p-qual kind="static" name="mandatory" type="boolean"><![CDATA[true]]></p-qual>
+    </p-param>
+    <p-param name="mtu">
+      <desc><![CDATA[MTU]]></desc>
+      <p-qual kind="static" name="defaultValue" type="number"><![CDATA[1500.0]]></p-qual>
+    </p-param>
+    <p-param name="isConnected">
+      <desc><![CDATA[Flag to indicated if the interface is connected]]></desc>
+      <p-qual kind="static" name="defaultValue" type="boolean"><![CDATA[true]]></p-qual>
+    </p-param>
+  </presentation>
+</workflow>
